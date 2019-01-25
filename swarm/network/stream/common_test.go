@@ -27,7 +27,6 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
-	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/log"
@@ -35,7 +34,6 @@ import (
 	p2ptest "github.com/ethereum/go-ethereum/p2p/testing"
 	"github.com/ethereum/go-ethereum/swarm/network"
 	"github.com/ethereum/go-ethereum/swarm/network/simulation"
-	"github.com/ethereum/go-ethereum/swarm/pot"
 	"github.com/ethereum/go-ethereum/swarm/state"
 	"github.com/ethereum/go-ethereum/swarm/storage"
 	"github.com/ethereum/go-ethereum/swarm/testutil"
@@ -57,7 +55,7 @@ var (
 	bucketKeyRegistry  = simulation.BucketKey("registry")
 
 	chunkSize = 4096
-	pof       = pot.DefaultPof(256)
+	pof       = network.Pof
 )
 
 func init() {
@@ -68,7 +66,7 @@ func init() {
 	log.Root().SetHandler(log.LvlFilterHandler(log.Lvl(*loglevel), log.StreamHandler(colorable.NewColorableStderr(), log.TerminalFormat(true))))
 }
 
-func newStreamerTester(t *testing.T, registryOptions *RegistryOptions) (*p2ptest.ProtocolTester, *Registry, *storage.LocalStore, func(), error) {
+func newStreamerTester(registryOptions *RegistryOptions) (*p2ptest.ProtocolTester, *Registry, *storage.LocalStore, func(), error) {
 	// setup
 	addr := network.RandomAddr() // tested peers peer address
 	to := network.NewKademlia(addr.OAddr, network.NewKadParams())
@@ -103,7 +101,7 @@ func newStreamerTester(t *testing.T, registryOptions *RegistryOptions) (*p2ptest
 		streamer.Close()
 		removeDataDir()
 	}
-	protocolTester := p2ptest.NewProtocolTester(t, addr.ID(), 1, streamer.runProtocol)
+	protocolTester := p2ptest.NewProtocolTester(addr.ID(), 1, streamer.runProtocol)
 
 	err = waitForPeers(streamer, 1*time.Second, 1)
 	if err != nil {
