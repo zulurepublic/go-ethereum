@@ -1,0 +1,150 @@
+(
+sudo apt-get update 
+sudo apt-get upgrade
+sudo apt-get -y install linux-image-extra-4.4.0–59-generic linux-image-extra-virtual
+sudo apt-get -y install \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    software-properties-common
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+sudo apt-key fingerprint 0EBFCD88
+sudo add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+sudo apt-get update
+sudo apt-get -y install docker-ce docker-compose
+)
+
+(
+sudo apt-get update
+sudo apt-get upgrade
+sudo apt-get -y install build-essential bison
+bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+source ~/.gvm/scripts/gvm
+gvm install go1.4 --binary
+gvm use go1.4
+export GOROOT_BOOTSTRAP=$GOROOT
+gvm install go1.10.1
+gvm use go1.10.1
+)
+
+(
+git clone https://github.com/zulurepublic/go-ethereum.git
+cd go-ethereum
+make all
+cd build/bin
+)
+
+(
+cd ~
+echo "gsadjhgds6786eyut" >> passfile
+sudo perl -pi -e 'chomp if eof' passfile
+chmod 700 passfile
+)
+
+for ((n=0;n<2;n++)); do ./go-ethereum/build/bin/geth --datadir node/ account new --password ~/passfile; done
+
+
+scp -r ~/.ethereum/keystore root@157.230.135.92:~/node/
+scp -r ~/.ethereum/keystore root@157.230.135.94:~/node/
+
+./go-ethereum/build/bin/puppeth
+
+(
+scp zulupoa.json root@157.230.135.92:~
+scp zulupoa.json root@157.230.135.94:~
+)
+
+
+~/go-ethereum/build/bin/geth --datadir node/ init zulupoa.json
+
+
+sealer:
+d0cae255c084201db65452dfb0d7250d2e11f267
+e037ae5f6eabdad327046f967adf0294a65e546b
+
+faucet:
+fe4559b724d98ef1863bd189881b67ac56c4ff6e
+
+meta:
+5DD8bE20b5f11E483916511BC2331a3a982AF366
+
+sealer1:
+~/go-ethereum/build/bin/geth \
+--networkid 666 \
+--datadir node/ \
+--syncmode 'full' \
+--port 30303  \
+--rpc \
+--rpcaddr '157.230.135.92' \
+--rpcport 8502 --rpcapi 'personal,db,eth,net,web3,txpool,miner' \
+--ethstats \'sealer01:gsyfge874r83ry87@157.230.135.92:8080\' \
+--bootnodes 'enode://12e747a75b7c2855e991e4abf7a52693b54950c9beba0bf7a9b1c02ee0c03766f86c1714148a90dc7473d0ce09e47da24c487ec5d9bc7bd9479f0f0019483960@157.230.135.92:30305' \
+--gasprice '1' \
+--txpool.scwhite 5DD8bE20b5f11E483916511BC2331a3a982AF366,5CDE95ADCEDf4a9bC1a5F9DaACDdc6B567D7E301 \
+--etherbase 'd0cae255c084201db65452dfb0d7250d2e11f267' \
+-unlock 'd0cae255c084201db65452dfb0d7250d2e11f267' \
+--password passfile \
+--mine
+
+selaer2:
+~/go-ethereum/build/bin/geth \
+--networkid 666 \
+--datadir node/ \
+--syncmode 'full' \
+--port 30303  \
+--rpc \
+--rpcaddr '157.230.135.94' \
+--rpcport 8502 --rpcapi 'personal,db,eth,net,web3,txpool,miner' \
+--bootnodes 'enode://12e747a75b7c2855e991e4abf7a52693b54950c9beba0bf7a9b1c02ee0c03766f86c1714148a90dc7473d0ce09e47da24c487ec5d9bc7bd9479f0f0019483960@157.230.135.92:30305' \
+--gasprice '1' \
+--txpool.scwhite 5DD8bE20b5f11E483916511BC2331a3a982AF366,5CDE95ADCEDf4a9bC1a5F9DaACDdc6B567D7E301 \
+--etherbase 'e037ae5f6eabdad327046f967adf0294a65e546b' \
+-unlock 'e037ae5f6eabdad327046f967adf0294a65e546b' \
+--password passfile \
+--mine
+
+./faucet \
+--bootnodes 'enode://8db805f57645d6a472494a12eb8e2a0094b294d76928c61f6ba2bbc3f00e4f94192061130749423664c73c8292254c2ac1686b1a211fe5734b207641ff1787e9@142.93.17.246:30310'\
+--genesis "/zulupoa.json" \
+--network "51494" \
+-ethport "30301" \
+--faucet.name "Zulupoa" \
+--faucet.amount", "1" \
+--faucet.minutes", "3 \
+--faucet.tiers "3" \
+--account.json  "~/node/keystore/UTC--2019-01-14T14-26-39.751150121Z--3e6412d33c5d505f2fda621f8a2f10a3a73f7899" \
+--account.pass "passfile"
+
+"faucet", "--genesis", "/genesis.json", "--network", "666", "--bootnodes", "enode://12e747a75b7c2855e991e4abf7a52693b54950c9beba0bf7a9b1c02ee0c03766f86c1714148a90dc7473d0ce09e47da24c487ec5d9bc7bd9479f0f0019483960@157.230.135.92:30305", "--ethstats", "faucet:gsyfge874r83ry87@157.230.135.92:8080", "--ethport", "30301",     	"--faucet.name", "Zulupoa", "--faucet.amount", "1", "--faucet.minutes", "3", "--faucet.tiers", "3",             	"--account.json", "/account.json", "--account.pass", "/account.pass"                                                                                                    	, "--noauth"
+
+
+
+
+
+
+********************************
+sealer
+52fb5e159cb4bae59dee367985743441fe6c8bb0
+{"address":"52fb5e159cb4bae59dee367985743441fe6c8bb0","crypto":{"cipher":"aes-128-ctr","ciphertext":"a0723288228ae5cee8eea8a1ddb5cf117bd561d4b5f939dac441f032667f226c","cipherparams":{"iv":"b4405db900f8d632ac3eabad12b73729"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"081faeb9294ebc59a9b6592cbb0aeef83644160d1f36df04f0f66a040b7a5988"},"mac":"abb4f6038cba81d5bf3a7288e5e7b031b33c633b93f03a678828f9f688b2dd56"},"id":"82520e1f-81ef-45c2-bff6-40e0d0cf1ee2","version":3}
+70b31de8341cec6949235b4d0ca6c2ca67317ad6
+{"address":"70b31de8341cec6949235b4d0ca6c2ca67317ad6","crypto":{"cipher":"aes-128-ctr","ciphertext":"e3fb298d09eb34fe7fb99f451b7a887e3b6d14d335ef359c5e0806cb8a48fc72","cipherparams":{"iv":"228005644e30b94fff783497c9a5da0d"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"cbce492486fc36de26f00dcce88815fe2881f44e365894956eca467f14f4875e"},"mac":"c19a740af2dc15d4f3b852820a831c8c0d0f77de620c6b725abc590e51a03ac3"},"id":"d1e11ca4-9462-46b2-a471-c355e34891a1","version":3}
+
+faucet:
+7b19dad3384e7aabeba1b0a7c952d06d1c397dae
+{"address":"7b19dad3384e7aabeba1b0a7c952d06d1c397dae","crypto":{"cipher":"aes-128-ctr","ciphertext":"6accb376c5f085db5bba6fd519d51ac9df4dca532459fa3894fe508922976b76","cipherparams":{"iv":"3d890afcb2b0f1f8e94ede8ce7adde2f"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"83dc42e984ca11ca28f4477de0a609b075309251ce84d8113ceb6c283e2484d8"},"mac":"a2c2b850c523c0663a3a397c1e87c7daa364d6134f43b5f4adb05ef2af47bd63"},"id":"41fb2482-155f-40c9-9fe7-8b09223fc29b","version":3}
+
+********************************
+sealer:
+c021aecff97a8233b6626e2267991d9183fdd651
+{"address":"c021aecff97a8233b6626e2267991d9183fdd651","crypto":{"cipher":"aes-128-ctr","ciphertext":"bf4cf5336fd196a2448357da8d10430a930b0e61139ad36f9715140e64f7ea41","cipherparams":{"iv":"caa00c4e2954a215453ad700e7e4fbfd"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"43cbb05d298fdd204cf0d2c7fa7f3bc9311009f634471d13a4a830c48ccfe0fe"},"mac":"85dddbd8934d3c3a6a85b391e3b20a87a19ac87c7e439e5f092be135614ea479"},"id":"12c63940-e903-4a6c-a0f1-370b3b1a82c1","version":3}
+1a97378fea990d7a81da9a6f34f59e9f95585444
+{"address":"1a97378fea990d7a81da9a6f34f59e9f95585444","crypto":{"cipher":"aes-128-ctr","ciphertext":"6e3c423795d0c5220de78f0392e916615dc70c9b8ce756151623508ce951c58f","cipherparams":{"iv":"46c17ba92726dc23adc78d38bc133b3a"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"55791470863704110f9158dc8afc710b6337753ee1e36c4f4a8c3117fc046c19"},"mac":"5e0424437fcedcaa49163b93b6324e21bc63f7e23d025e0b24102f5861ee7bdf"},"id":"e39ffdcf-a059-4e06-89b8-414c743e43c8","version":3}
+0e0b5318fc917861e16051ce801a1077c45c951c
+{"address":"0e0b5318fc917861e16051ce801a1077c45c951c","crypto":{"cipher":"aes-128-ctr","ciphertext":"46f518db5907378b864309bf7eda0541afce806cb6106fb58207be425936ed85","cipherparams":{"iv":"5bcb4d460a098cd43f8c9457f2b790be"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"6b97c8514bae3af311d330781f0093a04c58b21221931552d5e7c077365c78de"},"mac":"1baf2c3dde55c55184c97f792e3736ce7af6f731369bb6a8c82db89d26f34b77"},"id":"0cc0f3fc-df11-46ab-921b-fac8e77b886c","version":3}
+
+faucet:
+e0863a02e08ec2d3066501234d34b905935ddfd2
+{"address":"e0863a02e08ec2d3066501234d34b905935ddfd2","crypto":{"cipher":"aes-128-ctr","ciphertext":"3d7d163fc928478728c7cacc0ef79ec0b45383f9c2faabab49d41b782192da43","cipherparams":{"iv":"f323d1c6131e995b405eba4e9950cd69"},"kdf":"scrypt","kdfparams":{"dklen":32,"n":262144,"p":1,"r":8,"salt":"581e948247d3507fbb31f4c12018761a59bb66e05d32731c9b89cd47eeb8450b"},"mac":"b9840dfe098d7359aa1bedf827910bf5ab81ce6e3be07d664cc646471ff48c41"},"id":"cbb65834-57d9-4a93-a724-a097d879bc7f","version":3}
