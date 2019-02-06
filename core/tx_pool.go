@@ -618,13 +618,15 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	//timo Discart contract create for non whitelisted address
 	if to := tx.To(); to == nil {
-		if !pool.scwhitelist.contains(from) {
-			log.Info("Account is NOT whitelisted for smart contract deployment", "address", from)
+		codeSize := pool.currentState.GetCodeSize(from)
+		if codeSize == 0 {
+			if !pool.scwhitelist.contains(from) {
+				log.Info("Account is NOT whitelisted for smart contract deployment", "address", from)
 
-			return ErrInvalidSender
+				return ErrInvalidSender
+			}
+			log.Info("Account is whitelisted for smart contract deployment", "address", from)
 		}
-		log.Info("Account is whitelisted for smart contract deployment", "address", from)
-
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
