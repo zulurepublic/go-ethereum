@@ -634,6 +634,11 @@ var (
 		Usage: "External EVM configuration (default = built-in interpreter)",
 		Value: "",
 	}
+	//whitelist for smart contract deployment
+	SCWhitelistFlag = cli.StringFlag{
+		Name:  "txpool.scwhite",
+		Usage: "Comma separated accounts to white list for smart contract deploying.",
+	}
 )
 
 // MakeDataDir retrieves the currently requested data directory, terminating
@@ -1024,6 +1029,16 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 				Fatalf("Invalid account in --txpool.locals: %s", trimmed)
 			} else {
 				cfg.Locals = append(cfg.Locals, common.HexToAddress(account))
+			}
+		}
+	}
+	if ctx.GlobalIsSet(SCWhitelistFlag.Name) {
+		scwhitelist := strings.Split(ctx.GlobalString(SCWhitelistFlag.Name), ",")
+		for _, account := range scwhitelist {
+			if trimmed := strings.TrimSpace(account); !common.IsHexAddress(trimmed) {
+				Fatalf("Invalid account in --txpool.scwhite: %s", trimmed)
+			} else {
+				cfg.SCWhitelist = append(cfg.SCWhitelist, common.HexToAddress(account))
 			}
 		}
 	}

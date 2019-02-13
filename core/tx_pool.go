@@ -136,7 +136,8 @@ type TxPoolConfig struct {
 	AccountQueue uint64 // Maximum number of non-executable transaction slots permitted per account
 	GlobalQueue  uint64 // Maximum number of non-executable transaction slots for all accounts
 
-	Lifetime time.Duration // Maximum amount of time non-executable transaction are queued
+	Lifetime    time.Duration    // Maximum amount of time non-executable transaction are queued
+	SCWhitelist []common.Address // Addresses that should be treated by default as local
 }
 
 // DefaultTxPoolConfig contains the default configurations for the transaction
@@ -229,7 +230,8 @@ type TxPool struct {
 
 	wg sync.WaitGroup // for shutdown sync
 
-	homestead bool
+	homestead   bool
+	scwhitelist *accountSet
 }
 
 // NewTxPool creates a new transaction pool to gather, sort and filter inbound
@@ -255,6 +257,11 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 	for _, addr := range config.Locals {
 		log.Info("Setting new local account", "address", addr)
 		pool.locals.add(addr)
+	}
+	pool.scwhitelist = newAccountSet(pool.signer)
+	for _, addr := range config.SCWhitelist {
+		log.Info("Setting new whitelist account", "address", addr)
+		pool.scwhitelist.add(addr)
 	}
 	pool.priced = newTxPricedList(pool.all)
 	pool.reset(nil, chain.CurrentBlock().Header())
@@ -603,6 +610,18 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
+	}
+	//Discart contract create for non whitelisted address
+	if to := tx.To(); to == nil {
+		codeSize := pool.currentState.GetCodeSize(from)
+		if codeSize == 0 {
+			if !pool.scwhitelist.contains(from) {
+				log.Info("Account is NOT whitelisted for smart contract deployment", "address", from)
+
+				return ErrInvalidSender
+			}
+			log.Info("Account is whitelisted for smart contract deployment", "address", from)
+		}
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
