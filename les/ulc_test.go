@@ -1,27 +1,41 @@
+// Copyright 2019 The go-ethereum Authors
+// This file is part of the go-ethereum library.
+//
+// The go-ethereum library is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Lesser General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// The go-ethereum library is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Lesser General Public License for more details.
+//
+// You should have received a copy of the GNU Lesser General Public License
+// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+
 package les
 
 import (
+	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"net"
 	"reflect"
 	"testing"
 	"time"
 
-	"net"
-
-	"crypto/ecdsa"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/common/mclock"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
 
 func TestULCSyncWithOnePeer(t *testing.T) {
-	f := newFullPeerPair(t, 1, 4, testChainGen)
+	f := newFullPeerPair(t, 1, 4)
 	ulcConfig := &eth.ULCConfig{
 		MinTrustedFraction: 100,
 		TrustedServers:     []string{f.Node.String()},
@@ -48,7 +62,7 @@ func TestULCSyncWithOnePeer(t *testing.T) {
 }
 
 func TestULCReceiveAnnounce(t *testing.T) {
-	f := newFullPeerPair(t, 1, 4, testChainGen)
+	f := newFullPeerPair(t, 1, 4)
 	ulcConfig := &eth.ULCConfig{
 		MinTrustedFraction: 100,
 		TrustedServers:     []string{f.Node.String()},
@@ -85,8 +99,8 @@ func TestULCReceiveAnnounce(t *testing.T) {
 }
 
 func TestULCShouldNotSyncWithTwoPeersOneHaveEmptyChain(t *testing.T) {
-	f1 := newFullPeerPair(t, 1, 4, testChainGen)
-	f2 := newFullPeerPair(t, 2, 0, nil)
+	f1 := newFullPeerPair(t, 1, 4)
+	f2 := newFullPeerPair(t, 2, 0)
 	ulcConf := &ulc{minTrustedFraction: 100, trustedKeys: make(map[string]struct{})}
 	ulcConf.trustedKeys[f1.Node.ID().String()] = struct{}{}
 	ulcConf.trustedKeys[f2.Node.ID().String()] = struct{}{}
@@ -116,9 +130,9 @@ func TestULCShouldNotSyncWithTwoPeersOneHaveEmptyChain(t *testing.T) {
 }
 
 func TestULCShouldNotSyncWithThreePeersOneHaveEmptyChain(t *testing.T) {
-	f1 := newFullPeerPair(t, 1, 3, testChainGen)
-	f2 := newFullPeerPair(t, 2, 4, testChainGen)
-	f3 := newFullPeerPair(t, 3, 0, nil)
+	f1 := newFullPeerPair(t, 1, 3)
+	f2 := newFullPeerPair(t, 2, 4)
+	f3 := newFullPeerPair(t, 3, 0)
 
 	ulcConfig := &eth.ULCConfig{
 		MinTrustedFraction: 60,
@@ -196,10 +210,10 @@ func connectPeers(full, light pairPeer, version int) (*peer, *peer, error) {
 }
 
 // newFullPeerPair creates node with full sync mode
-func newFullPeerPair(t *testing.T, index int, numberOfblocks int, chainGen func(int, *core.BlockGen)) pairPeer {
-	db := ethdb.NewMemDatabase()
+func newFullPeerPair(t *testing.T, index int, numberOfblocks int) pairPeer {
+	db := rawdb.NewMemoryDatabase()
 
-	pmFull := newTestProtocolManagerMust(t, false, numberOfblocks, chainGen, nil, nil, db, nil)
+	pmFull, _ := newTestProtocolManagerMust(t, false, numberOfblocks, nil, nil, nil, db, nil)
 
 	peerPairFull := pairPeer{
 		Name: "full node",
@@ -217,13 +231,13 @@ func newFullPeerPair(t *testing.T, index int, numberOfblocks int, chainGen func(
 // newLightPeer creates node with light sync mode
 func newLightPeer(t *testing.T, ulcConfig *eth.ULCConfig) pairPeer {
 	peers := newPeerSet()
-	dist := newRequestDistributor(peers, make(chan struct{}))
+	dist := newRequestDistributor(peers, make(chan struct{}), &mclock.System{})
 	rm := newRetrieveManager(peers, dist, nil)
-	ldb := ethdb.NewMemDatabase()
+	ldb := rawdb.NewMemoryDatabase()
 
 	odr := NewLesOdr(ldb, light.DefaultClientIndexerConfig, rm)
 
-	pmLight := newTestProtocolManagerMust(t, true, 0, nil, odr, peers, ldb, ulcConfig)
+	pmLight, _ := newTestProtocolManagerMust(t, true, 0, odr, nil, peers, ldb, ulcConfig)
 	peerPairLight := pairPeer{
 		Name: "ulc node",
 		PM:   pmLight,

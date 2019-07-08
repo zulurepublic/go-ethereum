@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package les implements the Light Ethereum Subprotocol.
 package les
 
 import (
@@ -506,7 +505,7 @@ func parseTrustedNodes(trustedNodes []string) map[enode.ID]*enode.Node {
 	nodes := make(map[enode.ID]*enode.Node)
 
 	for _, node := range trustedNodes {
-		node, err := enode.ParseV4(node)
+		node, err := enode.Parse(enode.ValidSchemes, node)
 		if err != nil {
 			log.Warn("Trusted node URL invalid", "enode", node, "err", err)
 			continue

@@ -69,8 +69,10 @@ var AppHelpFlagGroups = []flagGroup{
 		Flags: []cli.Flag{
 			configFileFlag,
 			utils.DataDirFlag,
+			utils.AncientFlag,
 			utils.KeyStoreDirFlag,
 			utils.NoUSBFlag,
+			utils.SmartCardDaemonPathFlag,
 			utils.NetworkIdFlag,
 			utils.TestnetFlag,
 			utils.RinkebyFlag,
@@ -81,6 +83,8 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.EthStatsURLFlag,
 			utils.IdentityFlag,
 			utils.LightServFlag,
+			utils.LightBandwidthInFlag,
+			utils.LightBandwidthOutFlag,
 			utils.LightPeersFlag,
 			utils.LightKDFFlag,
 			utils.WhitelistFlag,
@@ -138,7 +142,7 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.CacheFlag,
 			utils.CacheDatabaseFlag,
 			utils.CacheGCFlag,
-			utils.TrieCacheGenFlag,
+			utils.CacheNoPrefetchFlag,
 		},
 	},
 	{
@@ -147,24 +151,31 @@ var AppHelpFlagGroups = []flagGroup{
 			utils.UnlockedAccountFlag,
 			utils.PasswordFileFlag,
 			utils.ExternalSignerFlag,
+			utils.InsecureUnlockAllowedFlag,
 		},
 	},
 	{
 		Name: "API AND CONSOLE",
 		Flags: []cli.Flag{
+			utils.IPCDisabledFlag,
+			utils.IPCPathFlag,
 			utils.RPCEnabledFlag,
 			utils.RPCListenAddrFlag,
 			utils.RPCPortFlag,
 			utils.RPCApiFlag,
+			utils.RPCGlobalGasCap,
+			utils.RPCCORSDomainFlag,
+			utils.RPCVirtualHostsFlag,
 			utils.WSEnabledFlag,
 			utils.WSListenAddrFlag,
 			utils.WSPortFlag,
 			utils.WSApiFlag,
 			utils.WSAllowedOriginsFlag,
-			utils.IPCDisabledFlag,
-			utils.IPCPathFlag,
-			utils.RPCCORSDomainFlag,
-			utils.RPCVirtualHostsFlag,
+			utils.GraphQLEnabledFlag,
+			utils.GraphQLListenAddrFlag,
+			utils.GraphQLPortFlag,
+			utils.GraphQLCORSDomainFlag,
+			utils.GraphQLVirtualHostsFlag,
 			utils.JSpathFlag,
 			utils.ExecFlag,
 			utils.PreloadJSFlag,
@@ -225,16 +236,8 @@ var AppHelpFlagGroups = []flagGroup{
 		}, debug.Flags...),
 	},
 	{
-		Name: "METRICS AND STATS",
-		Flags: []cli.Flag{
-			utils.MetricsEnabledFlag,
-			utils.MetricsEnableInfluxDBFlag,
-			utils.MetricsInfluxDBEndpointFlag,
-			utils.MetricsInfluxDBDatabaseFlag,
-			utils.MetricsInfluxDBUsernameFlag,
-			utils.MetricsInfluxDBPasswordFlag,
-			utils.MetricsInfluxDBTagsFlag,
-		},
+		Name:  "METRICS AND STATS",
+		Flags: metricsFlags,
 	},
 	{
 		Name:  "WHISPER (EXPERIMENTAL)",
@@ -309,7 +312,7 @@ func init() {
 					categorized[flag.String()] = struct{}{}
 				}
 			}
-			uncategorized := []cli.Flag{}
+			var uncategorized []cli.Flag
 			for _, flag := range data.(*cli.App).Flags {
 				if _, ok := categorized[flag.String()]; !ok {
 					if strings.HasPrefix(flag.GetName(), "dashboard") {
