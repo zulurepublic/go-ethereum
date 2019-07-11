@@ -180,18 +180,6 @@ func (tab *Table) ReadRandomNodes(buf []*enode.Node) (n int) {
 	return i + 1
 }
 
-<<<<<<< HEAD
-// Close terminates the network listener and flushes the node database.
-func (tab *Table) Close() {
-	tab.closeOnce.Do(func() {
-		if tab.net != nil {
-			tab.net.close()
-		}
-		// Wait for loop to end.
-		close(tab.closeReq)
-		<-tab.closed
-	})
-=======
 // getNode returns the node with the given ID or nil if it isn't in the table.
 func (tab *Table) getNode(id enode.ID) *enode.Node {
 	tab.mutex.Lock()
@@ -210,7 +198,6 @@ func (tab *Table) getNode(id enode.ID) *enode.Node {
 func (tab *Table) close() {
 	close(tab.closeReq)
 	<-tab.closed
->>>>>>> upstream/master
 }
 
 // setFallbackNodes sets the initial points of contact. These nodes
@@ -236,127 +223,6 @@ func (tab *Table) isInitDone() bool {
 	}
 }
 
-<<<<<<< HEAD
-// Resolve searches for a specific node with the given ID.
-// It returns nil if the node could not be found.
-func (tab *Table) Resolve(n *enode.Node) *enode.Node {
-	// If the node is present in the local table, no
-	// network interaction is required.
-	hash := n.ID()
-	tab.mutex.Lock()
-	cl := tab.closest(hash, 1)
-	tab.mutex.Unlock()
-	if len(cl.entries) > 0 && cl.entries[0].ID() == hash {
-		return unwrapNode(cl.entries[0])
-	}
-	// Otherwise, do a network lookup.
-	result := tab.lookup(encodePubkey(n.Pubkey()), true)
-	for _, n := range result {
-		if n.ID() == hash {
-			return unwrapNode(n)
-		}
-	}
-	return nil
-}
-
-// LookupRandom finds random nodes in the network.
-func (tab *Table) LookupRandom() []*enode.Node {
-	var target encPubkey
-	crand.Read(target[:])
-	return unwrapNodes(tab.lookup(target, true))
-}
-
-// lookup performs a network search for nodes close to the given target. It approaches the
-// target by querying nodes that are closer to it on each iteration. The given target does
-// not need to be an actual node identifier.
-func (tab *Table) lookup(targetKey encPubkey, refreshIfEmpty bool) []*node {
-	var (
-		target         = enode.ID(crypto.Keccak256Hash(targetKey[:]))
-		asked          = make(map[enode.ID]bool)
-		seen           = make(map[enode.ID]bool)
-		reply          = make(chan []*node, alpha)
-		pendingQueries = 0
-		result         *nodesByDistance
-	)
-	// don't query further if we hit ourself.
-	// unlikely to happen often in practice.
-	asked[tab.self().ID()] = true
-
-	for {
-		tab.mutex.Lock()
-		// generate initial result set
-		result = tab.closest(target, bucketSize)
-		tab.mutex.Unlock()
-		if len(result.entries) > 0 || !refreshIfEmpty {
-			break
-		}
-		// The result set is empty, all nodes were dropped, refresh.
-		// We actually wait for the refresh to complete here. The very
-		// first query will hit this case and run the bootstrapping
-		// logic.
-		<-tab.refresh()
-		refreshIfEmpty = false
-	}
-
-	for {
-		// ask the alpha closest nodes that we haven't asked yet
-		for i := 0; i < len(result.entries) && pendingQueries < alpha; i++ {
-			n := result.entries[i]
-			if !asked[n.ID()] {
-				asked[n.ID()] = true
-				pendingQueries++
-				go tab.findnode(n, targetKey, reply)
-			}
-		}
-		if pendingQueries == 0 {
-			// we have asked all closest nodes, stop the search
-			break
-		}
-		select {
-		case nodes := <-reply:
-			for _, n := range nodes {
-				if n != nil && !seen[n.ID()] {
-					seen[n.ID()] = true
-					result.push(n, bucketSize)
-				}
-			}
-		case <-tab.closeReq:
-			return nil // shutdown, no need to continue.
-		}
-		pendingQueries--
-	}
-	return result.entries
-}
-
-func (tab *Table) findnode(n *node, targetKey encPubkey, reply chan<- []*node) {
-	fails := tab.db.FindFails(n.ID(), n.IP())
-	r, err := tab.net.findnode(n.ID(), n.addr(), targetKey)
-	if err == errClosed {
-		// Avoid recording failures on shutdown.
-		reply <- nil
-		return
-	} else if err != nil || len(r) == 0 {
-		fails++
-		tab.db.UpdateFindFails(n.ID(), n.IP(), fails)
-		log.Trace("Findnode failed", "id", n.ID(), "failcount", fails, "err", err)
-		if fails >= maxFindnodeFailures {
-			log.Trace("Too many findnode failures, dropping", "id", n.ID(), "failcount", fails)
-			tab.delete(n)
-		}
-	} else if fails > 0 {
-		tab.db.UpdateFindFails(n.ID(), n.IP(), fails-1)
-	}
-
-	// Grab as many nodes as possible. Some of them might not be alive anymore, but we'll
-	// just remove those again during revalidation.
-	for _, n := range r {
-		tab.addSeenNode(n)
-	}
-	reply <- r
-}
-
-=======
->>>>>>> upstream/master
 func (tab *Table) refresh() <-chan struct{} {
 	done := make(chan struct{})
 	select {
@@ -459,11 +325,7 @@ func (tab *Table) loadSeedNodes() {
 	for i := range seeds {
 		seed := seeds[i]
 		age := log.Lazy{Fn: func() interface{} { return time.Since(tab.db.LastPongReceived(seed.ID(), seed.IP())) }}
-<<<<<<< HEAD
-		log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age)
-=======
 		tab.log.Trace("Found seed node in database", "id", seed.ID(), "addr", seed.addr(), "age", age)
->>>>>>> upstream/master
 		tab.addSeenNode(seed)
 	}
 }
@@ -498,26 +360,16 @@ func (tab *Table) doRevalidate(done chan<- struct{}) {
 	if err == nil {
 		// The node responded, move it to the front.
 		last.livenessChecks++
-<<<<<<< HEAD
-		log.Debug("Revalidated node", "b", bi, "id", last.ID(), "checks", last.livenessChecks)
-=======
 		tab.log.Debug("Revalidated node", "b", bi, "id", last.ID(), "checks", last.livenessChecks)
->>>>>>> upstream/master
 		tab.bumpInBucket(b, last)
 		return
 	}
 	// No reply received, pick a replacement or delete the node if there aren't
 	// any replacements.
 	if r := tab.replace(b, last); r != nil {
-<<<<<<< HEAD
-		log.Debug("Replaced dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks, "r", r.ID(), "rip", r.IP())
-	} else {
-		log.Debug("Removed dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks)
-=======
 		tab.log.Debug("Replaced dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks, "r", r.ID(), "rip", r.IP())
 	} else {
 		tab.log.Debug("Removed dead node", "b", bi, "id", last.ID(), "ip", last.IP(), "checks", last.livenessChecks)
->>>>>>> upstream/master
 	}
 }
 
@@ -568,16 +420,10 @@ func (tab *Table) closest(target enode.ID, nresults int, checklive bool) *nodesB
 	close := &nodesByDistance{target: target}
 	for _, b := range &tab.buckets {
 		for _, n := range b.entries {
-<<<<<<< HEAD
-			if n.livenessChecks > 0 {
-				close.push(n, nresults)
-			}
-=======
 			if checklive && n.livenessChecks == 0 {
 				continue
 			}
 			close.push(n, nresults)
->>>>>>> upstream/master
 		}
 	}
 	return close

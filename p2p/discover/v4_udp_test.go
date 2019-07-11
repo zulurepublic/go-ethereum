@@ -59,11 +59,7 @@ type udpTest struct {
 	pipe                *dgramPipe
 	table               *Table
 	db                  *enode.DB
-<<<<<<< HEAD:p2p/discover/udp_test.go
-	udp                 *udp
-=======
 	udp                 *UDPv4
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	sent                [][]byte
 	localkey, remotekey *ecdsa.PrivateKey
 	remoteaddr          *net.UDPAddr
@@ -77,11 +73,6 @@ func newUDPTest(t *testing.T) *udpTest {
 		remotekey:  newkey(),
 		remoteaddr: &net.UDPAddr{IP: net.IP{10, 0, 1, 99}, Port: 30303},
 	}
-<<<<<<< HEAD:p2p/discover/udp_test.go
-	test.db, _ = enode.OpenDB("")
-	ln := enode.NewLocalNode(test.db, test.localkey)
-	test.table, test.udp, _ = newUDP(test.pipe, ln, Config{PrivateKey: test.localkey})
-=======
 
 	test.db, _ = enode.OpenDB("")
 	ln := enode.NewLocalNode(test.db, test.localkey)
@@ -90,31 +81,17 @@ func newUDPTest(t *testing.T) *udpTest {
 		Log:        testlog.Logger(t, log.LvlTrace),
 	})
 	test.table = test.udp.tab
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	// Wait for initial refresh so the table doesn't send unexpected findnode.
 	<-test.table.initDone
 	return test
 }
 
 func (test *udpTest) close() {
-<<<<<<< HEAD:p2p/discover/udp_test.go
-	test.table.Close()
-=======
 	test.udp.Close()
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	test.db.Close()
 }
 
 // handles a packet as if it had been sent to the transport.
-<<<<<<< HEAD:p2p/discover/udp_test.go
-func (test *udpTest) packetIn(wantError error, ptype byte, data packet) error {
-	return test.packetInFrom(wantError, test.remotekey, test.remoteaddr, ptype, data)
-}
-
-// handles a packet as if it had been sent to the transport by the key/endpoint.
-func (test *udpTest) packetInFrom(wantError error, key *ecdsa.PrivateKey, addr *net.UDPAddr, ptype byte, data packet) error {
-	enc, _, err := encodePacket(key, ptype, data)
-=======
 func (test *udpTest) packetIn(wantError error, data packetV4) {
 	test.t.Helper()
 
@@ -126,46 +103,16 @@ func (test *udpTest) packetInFrom(wantError error, key *ecdsa.PrivateKey, addr *
 	test.t.Helper()
 
 	enc, _, err := test.udp.encode(key, data)
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	if err != nil {
 		test.t.Errorf("%s encode error: %v", data.name(), err)
 	}
 	test.sent = append(test.sent, enc)
 	if err = test.udp.handlePacket(addr, enc); err != wantError {
-<<<<<<< HEAD:p2p/discover/udp_test.go
-		return test.errorf("error mismatch: got %q, want %q", err, wantError)
-=======
 		test.t.Errorf("error mismatch: got %q, want %q", err, wantError)
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	}
 }
 
 // waits for a packet to be sent by the transport.
-<<<<<<< HEAD:p2p/discover/udp_test.go
-// validate should have type func(*udpTest, X) error, where X is a packet type.
-func (test *udpTest) waitPacketOut(validate interface{}) (*net.UDPAddr, []byte, error) {
-	dgram := test.pipe.waitPacketOut()
-	p, _, hash, err := decodePacket(dgram.data)
-	if err != nil {
-		return &dgram.to, hash, test.errorf("sent packet decode error: %v", err)
-	}
-	fn := reflect.ValueOf(validate)
-	exptype := fn.Type().In(0)
-	if reflect.TypeOf(p) != exptype {
-		return &dgram.to, hash, test.errorf("sent packet type mismatch, got: %v, want: %v", reflect.TypeOf(p), exptype)
-	}
-	fn.Call([]reflect.Value{reflect.ValueOf(p)})
-	return &dgram.to, hash, nil
-}
-
-func (test *udpTest) errorf(format string, args ...interface{}) error {
-	_, file, line, ok := runtime.Caller(2) // errorf + waitPacketOut
-	if ok {
-		file = filepath.Base(file)
-	} else {
-		file = "???"
-		line = 1
-=======
 // validate should have type func(X, *net.UDPAddr, []byte), where X is a packet type.
 func (test *udpTest) waitPacketOut(validate interface{}) (closed bool) {
 	test.t.Helper()
@@ -184,7 +131,6 @@ func (test *udpTest) waitPacketOut(validate interface{}) (closed bool) {
 	if !reflect.TypeOf(p).AssignableTo(exptype) {
 		test.t.Errorf("sent packet type mismatch, got: %v, want: %v", reflect.TypeOf(p), exptype)
 		return false
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	}
 	fn.Call([]reflect.Value{reflect.ValueOf(p), reflect.ValueOf(&dgram.to), reflect.ValueOf(hash)})
 	return false
@@ -257,11 +203,7 @@ func TestUDPv4_responseTimeouts(t *testing.T) {
 			p.errc = nilErr
 			test.udp.addReplyMatcher <- p
 			time.AfterFunc(randomDuration(60*time.Millisecond), func() {
-<<<<<<< HEAD:p2p/discover/udp_test.go
-				if !test.udp.handleReply(p.from, p.ip, p.ptype, nil) {
-=======
 				if !test.udp.handleReply(p.from, p.ip, testPacket(p.ptype)) {
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 					t.Logf("not matched: %v", p)
 				}
 			})
@@ -345,13 +287,8 @@ func TestUDPv4_findnode(t *testing.T) {
 	test.table.db.UpdateLastPongReceived(remoteID, test.remoteaddr.IP, time.Now())
 
 	// check that closest neighbors are returned.
-<<<<<<< HEAD:p2p/discover/udp_test.go
-	expected := test.table.closest(testTarget.id(), bucketSize)
-	test.packetIn(nil, findnodePacket, &findnode{Target: testTarget, Expiration: futureExp})
-=======
 	expected := test.table.closest(testTarget.id(), bucketSize, true)
 	test.packetIn(nil, &findnodeV4{Target: testTarget, Expiration: futureExp})
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	waitNeighbors := func(want []*node) {
 		test.waitPacketOut(func(p *neighborsV4, to *net.UDPAddr, hash []byte) {
 			if len(p.Nodes) != len(want) {
@@ -431,43 +368,14 @@ func TestUDPv4_findnodeMultiReply(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD:p2p/discover/udp_test.go
-func TestUDP_pingMatch(t *testing.T) {
-=======
 // This test checks that reply matching of pong verifies the ping hash.
 func TestUDPv4_pingMatch(t *testing.T) {
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	test := newUDPTest(t)
 	defer test.close()
 
 	randToken := make([]byte, 32)
 	crand.Read(randToken)
 
-<<<<<<< HEAD:p2p/discover/udp_test.go
-	test.packetIn(nil, pingPacket, &ping{From: testRemote, To: testLocalAnnounced, Version: 4, Expiration: futureExp})
-	test.waitPacketOut(func(*pong) error { return nil })
-	test.waitPacketOut(func(*ping) error { return nil })
-	test.packetIn(errUnsolicitedReply, pongPacket, &pong{ReplyTok: randToken, To: testLocalAnnounced, Expiration: futureExp})
-}
-
-func TestUDP_pingMatchIP(t *testing.T) {
-	test := newUDPTest(t)
-	defer test.close()
-
-	test.packetIn(nil, pingPacket, &ping{From: testRemote, To: testLocalAnnounced, Version: 4, Expiration: futureExp})
-	test.waitPacketOut(func(*pong) error { return nil })
-
-	_, hash, _ := test.waitPacketOut(func(*ping) error { return nil })
-	wrongAddr := &net.UDPAddr{IP: net.IP{33, 44, 1, 2}, Port: 30000}
-	test.packetInFrom(errUnsolicitedReply, test.remotekey, wrongAddr, pongPacket, &pong{
-		ReplyTok:   hash,
-		To:         testLocalAnnounced,
-		Expiration: futureExp,
-	})
-}
-
-func TestUDP_successfulPing(t *testing.T) {
-=======
 	test.packetIn(nil, &pingV4{From: testRemote, To: testLocalAnnounced, Version: 4, Expiration: futureExp})
 	test.waitPacketOut(func(*pongV4, *net.UDPAddr, []byte) {})
 	test.waitPacketOut(func(*pingV4, *net.UDPAddr, []byte) {})
@@ -493,7 +401,6 @@ func TestUDPv4_pingMatchIP(t *testing.T) {
 }
 
 func TestUDPv4_successfulPing(t *testing.T) {
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	test := newUDPTest(t)
 	added := make(chan *node, 1)
 	test.table.nodeAddedHook = func(n *node) { added <- n }
@@ -519,13 +426,8 @@ func TestUDPv4_successfulPing(t *testing.T) {
 		}
 	})
 
-<<<<<<< HEAD:p2p/discover/udp_test.go
-	// remote is unknown, the table pings back.
-	_, hash, _ := test.waitPacketOut(func(p *ping) error {
-=======
 	// Remote is unknown, the table pings back.
 	test.waitPacketOut(func(p *pingV4, to *net.UDPAddr, hash []byte) {
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 		if !reflect.DeepEqual(p.From, test.udp.ourEndpoint()) {
 			t.Errorf("got ping.From %#v, want %#v", p.From, test.udp.ourEndpoint())
 		}
@@ -769,11 +671,7 @@ func (c *dgramPipe) LocalAddr() net.Addr {
 	return &net.UDPAddr{IP: testLocal.IP, Port: int(testLocal.UDP)}
 }
 
-<<<<<<< HEAD:p2p/discover/udp_test.go
-func (c *dgramPipe) waitPacketOut() dgram {
-=======
 func (c *dgramPipe) receive() (dgram, bool) {
->>>>>>> upstream/master:p2p/discover/v4_udp_test.go
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	for len(c.queue) == 0 && !c.closed {

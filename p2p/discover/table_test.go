@@ -52,11 +52,7 @@ func testPingReplace(t *testing.T, newNodeIsResponding, lastInBucketIsResponding
 	transport := newPingRecorder()
 	tab, db := newTestTable(transport)
 	defer db.Close()
-<<<<<<< HEAD
-	defer tab.Close()
-=======
 	defer tab.close()
->>>>>>> upstream/master
 
 	<-tab.initDone
 
@@ -121,11 +117,7 @@ func TestBucket_bumpNoDuplicates(t *testing.T) {
 	prop := func(nodes []*node, bumps []int) (ok bool) {
 		tab, db := newTestTable(newPingRecorder())
 		defer db.Close()
-<<<<<<< HEAD
-		defer tab.Close()
-=======
 		defer tab.close()
->>>>>>> upstream/master
 
 		b := &bucket{entries: make([]*node, len(nodes))}
 		copy(b.entries, nodes)
@@ -152,11 +144,7 @@ func TestTable_IPLimit(t *testing.T) {
 	transport := newPingRecorder()
 	tab, db := newTestTable(transport)
 	defer db.Close()
-<<<<<<< HEAD
-	defer tab.Close()
-=======
 	defer tab.close()
->>>>>>> upstream/master
 
 	for i := 0; i < tableIPLimit+1; i++ {
 		n := nodeAtDistance(tab.self().ID(), i, net.IP{172, 0, 1, byte(i)})
@@ -173,11 +161,7 @@ func TestTable_BucketIPLimit(t *testing.T) {
 	transport := newPingRecorder()
 	tab, db := newTestTable(transport)
 	defer db.Close()
-<<<<<<< HEAD
-	defer tab.Close()
-=======
 	defer tab.close()
->>>>>>> upstream/master
 
 	d := 3
 	for i := 0; i < bucketIPLimit+1; i++ {
@@ -214,11 +198,7 @@ func TestTable_closest(t *testing.T) {
 		transport := newPingRecorder()
 		tab, db := newTestTable(transport)
 		defer db.Close()
-<<<<<<< HEAD
-		defer tab.Close()
-=======
 		defer tab.close()
->>>>>>> upstream/master
 		fillTable(tab, test.All)
 
 		// check that closest(Target, N) returns nodes
@@ -279,11 +259,7 @@ func TestTable_ReadRandomNodesGetAll(t *testing.T) {
 		transport := newPingRecorder()
 		tab, db := newTestTable(transport)
 		defer db.Close()
-<<<<<<< HEAD
-		defer tab.Close()
-=======
 		defer tab.close()
->>>>>>> upstream/master
 		<-tab.initDone
 
 		for i := 0; i < len(buf); i++ {
@@ -332,96 +308,6 @@ func (*closeTest) Generate(rand *rand.Rand, size int) reflect.Value {
 func TestTable_addVerifiedNode(t *testing.T) {
 	tab, db := newTestTable(newPingRecorder())
 	<-tab.initDone
-<<<<<<< HEAD
-	defer db.Close()
-	defer tab.Close()
-
-	// Insert two nodes.
-	n1 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 1})
-	n2 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 2})
-	tab.addSeenNode(n1)
-	tab.addSeenNode(n2)
-
-	// Verify bucket content:
-	bcontent := []*node{n1, n2}
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
-		t.Fatalf("wrong bucket content: %v", tab.bucket(n1.ID()).entries)
-	}
-
-	// Add a changed version of n2.
-	newrec := n2.Record()
-	newrec.Set(enr.IP{99, 99, 99, 99})
-	newn2 := wrapNode(enode.SignNull(newrec, n2.ID()))
-	tab.addVerifiedNode(newn2)
-
-	// Check that bucket is updated correctly.
-	newBcontent := []*node{newn2, n1}
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, newBcontent) {
-		t.Fatalf("wrong bucket content after update: %v", tab.bucket(n1.ID()).entries)
-	}
-	checkIPLimitInvariant(t, tab)
-}
-
-func TestTable_addSeenNode(t *testing.T) {
-	tab, db := newTestTable(newPingRecorder())
-	<-tab.initDone
-	defer db.Close()
-	defer tab.Close()
-
-	// Insert two nodes.
-	n1 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 1})
-	n2 := nodeAtDistance(tab.self().ID(), 256, net.IP{88, 77, 66, 2})
-	tab.addSeenNode(n1)
-	tab.addSeenNode(n2)
-
-	// Verify bucket content:
-	bcontent := []*node{n1, n2}
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
-		t.Fatalf("wrong bucket content: %v", tab.bucket(n1.ID()).entries)
-	}
-
-	// Add a changed version of n2.
-	newrec := n2.Record()
-	newrec.Set(enr.IP{99, 99, 99, 99})
-	newn2 := wrapNode(enode.SignNull(newrec, n2.ID()))
-	tab.addSeenNode(newn2)
-
-	// Check that bucket content is unchanged.
-	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
-		t.Fatalf("wrong bucket content after update: %v", tab.bucket(n1.ID()).entries)
-	}
-	checkIPLimitInvariant(t, tab)
-}
-
-func TestTable_Lookup(t *testing.T) {
-	tab, db := newTestTable(lookupTestnet)
-	defer db.Close()
-	defer tab.Close()
-
-	// lookup on empty table returns no nodes
-	if results := tab.lookup(lookupTestnet.target, false); len(results) > 0 {
-		t.Fatalf("lookup on empty table returned %d results: %#v", len(results), results)
-	}
-	// seed table with initial node (otherwise lookup will terminate immediately)
-	seedKey, _ := decodePubkey(lookupTestnet.dists[256][0])
-	seed := wrapNode(enode.NewV4(seedKey, net.IP{127, 0, 0, 1}, 0, 256))
-	seed.livenessChecks = 1
-	fillTable(tab, []*node{seed})
-
-	results := tab.lookup(lookupTestnet.target, true)
-	t.Logf("results:")
-	for _, e := range results {
-		t.Logf("  ld=%d, %x", enode.LogDist(lookupTestnet.targetSha, e.ID()), e.ID().Bytes())
-	}
-	if len(results) != bucketSize {
-		t.Errorf("wrong number of results: got %d, want %d", len(results), bucketSize)
-	}
-	if hasDuplicates(results) {
-		t.Errorf("result set contains duplicate entries")
-	}
-	if !sortedByDistanceTo(lookupTestnet.targetSha, results) {
-		t.Errorf("result set not sorted by distance to target")
-=======
 	defer db.Close()
 	defer tab.close()
 
@@ -435,7 +321,6 @@ func TestTable_Lookup(t *testing.T) {
 	bcontent := []*node{n1, n2}
 	if !reflect.DeepEqual(tab.bucket(n1.ID()).entries, bcontent) {
 		t.Fatalf("wrong bucket content: %v", tab.bucket(n1.ID()).entries)
->>>>>>> upstream/master
 	}
 
 	// Add a changed version of n2.
@@ -483,40 +368,6 @@ func TestTable_addSeenNode(t *testing.T) {
 	checkIPLimitInvariant(t, tab)
 }
 
-<<<<<<< HEAD
-func (*preminedTestnet) close()                                        {}
-func (*preminedTestnet) ping(toid enode.ID, toaddr *net.UDPAddr) error { return nil }
-
-// mine generates a testnet struct literal with nodes at
-// various distances to the given target.
-func (tn *preminedTestnet) mine(target encPubkey) {
-	tn.target = target
-	tn.targetSha = tn.target.id()
-	found := 0
-	for found < bucketSize*10 {
-		k := newkey()
-		key := encodePubkey(&k.PublicKey)
-		ld := enode.LogDist(tn.targetSha, key.id())
-		if len(tn.dists[ld]) < bucketSize {
-			tn.dists[ld] = append(tn.dists[ld], key)
-			fmt.Println("found ID with ld", ld)
-			found++
-		}
-	}
-	fmt.Println("&preminedTestnet{")
-	fmt.Printf("	target: %#v,\n", tn.target)
-	fmt.Printf("	targetSha: %#v,\n", tn.targetSha)
-	fmt.Printf("	dists: [%d][]encPubkey{\n", len(tn.dists))
-	for ld, ns := range tn.dists {
-		if len(ns) == 0 {
-			continue
-		}
-		fmt.Printf("		%d: []encPubkey{\n", ld)
-		for _, n := range ns {
-			fmt.Printf("			hexEncPubkey(\"%x\"),\n", n[:])
-		}
-		fmt.Println("		},")
-=======
 // This test checks that ENR updates happen during revalidation. If a node in the table
 // announces a new sequence number, the new record should be pulled.
 func TestTable_revalidateSyncRecord(t *testing.T) {
@@ -542,7 +393,6 @@ func TestTable_revalidateSyncRecord(t *testing.T) {
 	intable := tab.getNode(id)
 	if !reflect.DeepEqual(intable, n2) {
 		t.Fatalf("table contains old record with seq %d, want seq %d", intable.Seq(), n2.Seq())
->>>>>>> upstream/master
 	}
 }
 

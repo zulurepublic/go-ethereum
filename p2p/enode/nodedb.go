@@ -57,11 +57,7 @@ const (
 const (
 	dbNodeExpiration = 24 * time.Hour // Time after which an unseen node should be dropped.
 	dbCleanupCycle   = time.Hour      // Time period for running the expiration task.
-<<<<<<< HEAD
-	dbVersion        = 8
-=======
 	dbVersion        = 9
->>>>>>> upstream/master
 )
 
 var zeroIP = make(net.IP, 16)
@@ -384,20 +380,12 @@ func (db *DB) UpdateFindFails(id ID, ip net.IP, fails int) error {
 
 // LocalSeq retrieves the local record sequence counter.
 func (db *DB) localSeq(id ID) uint64 {
-<<<<<<< HEAD
-	return db.fetchUint64(nodeItemKey(id, zeroIP, dbLocalSeq))
-=======
 	return db.fetchUint64(localItemKey(id, dbLocalSeq))
->>>>>>> upstream/master
 }
 
 // storeLocalSeq stores the local record sequence counter.
 func (db *DB) storeLocalSeq(id ID, n uint64) {
-<<<<<<< HEAD
-	db.storeUint64(nodeItemKey(id, zeroIP, dbLocalSeq), n)
-=======
 	db.storeUint64(localItemKey(id, dbLocalSeq), n)
->>>>>>> upstream/master
 }
 
 // QuerySeeds retrieves random nodes to be used as potential seed nodes

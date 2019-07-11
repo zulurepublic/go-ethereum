@@ -134,9 +134,6 @@ func (t *pingRecorder) ping(n *enode.Node) (seq uint64, err error) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
-<<<<<<< HEAD
-func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) error {
-=======
 	t.pinged[n.ID()] = true
 	if t.dead[n.ID()] {
 		return 0, errTimeout
@@ -149,7 +146,6 @@ func (t *pingRecorder) ping(toid enode.ID, toaddr *net.UDPAddr) error {
 
 // requestENR simulates an ENR request.
 func (t *pingRecorder) RequestENR(n *enode.Node) (*enode.Node, error) {
->>>>>>> upstream/master
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
@@ -174,14 +170,6 @@ func hasDuplicates(slice []*node) bool {
 }
 
 func sortedByDistanceTo(distbase enode.ID, slice []*node) bool {
-<<<<<<< HEAD
-	var last enode.ID
-	for i, e := range slice {
-		if i > 0 && enode.DistCmp(distbase, e.ID(), last) < 0 {
-			return false
-		}
-		last = e.ID()
-=======
 	return sort.SliceIsSorted(slice, func(i, j int) bool {
 		return enode.DistCmp(distbase, slice[i].ID(), slice[j].ID()) < 0
 	})
@@ -191,7 +179,6 @@ func hexEncPrivkey(h string) *ecdsa.PrivateKey {
 	b, err := hex.DecodeString(h)
 	if err != nil {
 		panic(err)
->>>>>>> upstream/master
 	}
 	key, err := crypto.ToECDSA(b)
 	if err != nil {
