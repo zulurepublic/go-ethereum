@@ -71,7 +71,11 @@ func TestDBNodeItemKey(t *testing.T) {
 	if id != keytestID {
 		t.Errorf("splitNodeItemKey returned wrong ID: %v", id)
 	}
+<<<<<<< HEAD
 	if !bytes.Equal(ip, wantIP) {
+=======
+	if !ip.Equal(wantIP) {
+>>>>>>> upstream/master
 		t.Errorf("splitNodeItemKey returned wrong IP: %v", ip)
 	}
 	if field != wantField {
